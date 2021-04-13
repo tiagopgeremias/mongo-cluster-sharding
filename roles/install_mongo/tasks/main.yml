@@ -1,0 +1,31 @@
+- name: Create repository MongoDB
+  blockinfile:
+    path: /etc/yum.repos.d/mongodb-org-4.4.repo
+    block: |
+      [mongodb-org-4.4]
+      name=MongoDB Repository
+      baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.4/x86_64/
+      gpgcheck=1
+      enabled=1
+      gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc
+    owner: root
+    group: root
+    create: true
+
+# - name: Update System
+#   yum:
+#     name: '*'
+#     state: latest
+
+- name: Install Mongodb
+  yum:
+    name: mongodb-org
+    state: present
+
+- name: Remove default configurarion
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop:
+    - { name: '/etc/mongod.conf'}
+    - { name: '/usr/lib/systemd/system/mongod.service'}

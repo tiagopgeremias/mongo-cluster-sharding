@@ -1,0 +1,17 @@
+- hosts: all
+  any_errors_fatal: true
+  remote_user: root
+  become_user: root
+  become: yes
+  roles:
+    - config_system
+    # - { role: config_lvm, when: "'shard-servers' in group_names" }
+    - install_mongo
+
+- hosts: shard-servers
+  remote_user: root
+  become_user: root
+  become: yes
+  roles:
+    - config_lvm
+    - config_shardrs

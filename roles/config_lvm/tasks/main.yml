@@ -1,0 +1,81 @@
+#
+#   Playbook provisionamento de LVM
+#   
+#       VARIAVEIS:
+#
+#   disk_path       Caminho do path onde se encontra o disco, exemplo: /dev/sdb
+#   vg_name         Nome do grupo de volumes.
+#   pvs_name        Caminho da partição criada, exemplo: /dev/sdb1
+#   lv_name         Nome do volume lógico.
+#   mount_point     Local onde sera o montado o logical volume
+#   file_system     Tipo de sistema de arquivos, exemplo: ext3, ext4, xfs etc.
+#   
+#
+
+# - name: Update System
+#   yum:
+#     name: '*'
+#     state: latest
+    
+- name: Install LVM
+  yum:
+    name: 'lvm*'
+    state: present
+     
+- name: Verifique Partition Exists
+  shell: "ls -l {{ pvs_name }} 2> /dev/null | wc -l"
+  register: part_exists
+  
+- name: Create Partition
+  parted:
+    device: "{{ disk_path }}"
+    number: 2
+    flags: [ lvm ]
+    state: present
+    part_start: 1GiB
+  when: part_exists.stdout == "0"
+    
+- name: Create Volume Group
+  lvg:
+    vg: "{{ vg_name }}"
+    pvs: "{{ pvs_name }}"
+    pesize: "8"
+    
+- name: Create Logical volume
+  lvol:
+    vg: "{{ vg_name }}" 
+    lv: "{{ lv_name }}"
+    shrink: no
+    size: 100%FREE 
+    
+- name: Set file system
+  filesystem:
+    fstype: "{{ file_system }}"
+    dev: "/dev/mapper/{{ vg_name }}-{{ lv_name }}"
+
+- name: Mount Partition "{{ mount_point }}"
+  mount:
+    path: "{{ mount_point }}"
+    src: "/dev/mapper/{{ vg_name }}-{{ lv_name }}"
+    fstype: "{{ file_system }}"
+    opts: rw,noatime,noexec,nodev,nosuid
+    state: mounted
+
+- name: Configure Readahead
+  shell: "/sbin/blockdev --setra 25 $(df -h | grep {{ mount_point }} | awk '{print $1}')"
+  register: config_readahead
+  when: "'shard-servers' in group_names"
+
+- name: Reboot system
+  shell: sleep 2 && shutdown -r now
+  async: 5
+  poll: 0
+  when: config_readahead.changed
+
+- name: Reestablishing the connection with the hosts
+  wait_for_connection:
+    connect_timeout: 20
+    sleep: 5
+    delay: 5
+    timeout: 300
+  when: config_readahead.changed

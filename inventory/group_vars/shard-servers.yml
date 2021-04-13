@@ -1,0 +1,4 @@
+shardings_config:
+  - { name: 'mongors1', port: '27017' }
+  - { name: 'mongors2', port: '27027' }
+  - { name: 'mongors3', port: '27037' }

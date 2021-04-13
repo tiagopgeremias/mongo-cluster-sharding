@@ -1,0 +1,39 @@
+# for documentation of all options, see:
+#   http://docs.mongodb.org/manual/reference/configuration-options/
+
+# where to write logging data.
+systemLog:
+  destination: file
+  logAppend: true
+  path: /var/log/mongodb/{{ item.name }}.log
+
+# Where and how to store data.
+storage:
+  dbPath: /data/{{ item.name }}
+  journal:
+    enabled: true
+#  engine:
+#  wiredTiger:
+
+# how the process runs
+processManagement:
+  fork: true  # fork and run in background
+  pidFilePath: /var/run/mongodb/{{ item.name }}.pid  # location of pidfile
+  timeZoneInfo: /usr/share/zoneinfo
+
+# security
+# security:
+#   keyFile: /data/mongossl.key
+
+# network interfaces
+net:
+  port: {{ item.port }}
+  bindIp: 0.0.0.0  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.
+
+# Role shardsvr
+sharding:
+  clusterRole: shardsvr
+
+#	replica set
+replication:
+   replSetName: "{{ replica_set_name }}"

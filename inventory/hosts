@@ -1,0 +1,35 @@
+[all:vars]
+
+# [router-servers]
+# 10.0.0.50
+
+# [config-servers]
+# 10.0.0.51
+
+[shard-servers:vars]
+disk_path=/dev/vdb
+vg_name=vg_mongodb
+pvs_name=/dev/vdb1
+lv_name=lv_mongodb
+mount_point=/data
+file_system=ext4
+
+[shard-servers:children]
+shard1
+shard2
+shard3
+
+[shard1]
+10.0.0.52 port=27017 name_system=rs1 primary=yes
+10.0.0.52 port=27027 name_system=rs2
+10.0.0.52 port=27037 name_system=rs3
+
+[shard2]
+10.0.0.53 port=27017 name_system=rs1 primary=yes
+10.0.0.53 port=27027 name_system=rs2
+10.0.0.53 port=27037 name_system=rs3
+
+[shard3]
+10.0.0.54 port=27017 name_system=rs1 primary=yes
+10.0.0.54 port=27027 name_system=rs2
+10.0.0.54 port=27037 name_system=rs3

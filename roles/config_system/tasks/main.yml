@@ -1,0 +1,87 @@
+- name: disable SELinux
+  command: setenforce 0
+  ignore_errors: yes
+  register: disable_selinux
+
+- name: disable SELinux on reboot
+  selinux:
+    state: disabled
+  ignore_errors: yes
+  register: disable_selinux
+
+- name: Configure Limits for open files
+  template:
+    src: 99-mongodb-nproc.conf.j2
+    dest: /etc/security/limits.d/99-mongodb-nproc.conf
+    owner: root
+    group: root
+    mode: '0644'
+  register: config_limits
+
+- name: Define Limits for system
+  shell: "{{ item }}"
+  with_items:
+    - ulimit -f unlimited
+    - ulimit -t unlimited
+    - ulimit -v unlimited
+    - ulimit -l unlimited
+    - ulimit -m unlimited
+    - ulimit -n 64000
+    - ulimit -u 64000
+
+- name: Configure sufficient file handles
+  sysctl:
+    name: fs.file-max
+    value: '98000'
+    sysctl_set: yes
+
+- name: Configure kernel pid limit
+  sysctl:
+    name: kernel.pid_max
+    value: '64000'
+    sysctl_set: yes
+
+- name: Configure maximum threads per process
+  sysctl:
+    name: kernel.threads-max
+    value: '64000'
+    sysctl_set: yes
+
+- name: Configure maximum number of memory map areas per process
+  sysctl:
+    name: vm.max_map_count
+    value: '128000'
+    sysctl_set: yes
+
+- name: Disable Transparent Huge pages - Grub Adjust
+  template:
+    src: grub
+    dest: /etc/default/grub
+    owner: root
+    group: root
+    mode: '0644'
+  register: grub_adjust
+
+- name: Disable Transparent Huge pages - Grub recompile
+  shell: grub2-mkconfig -o /boot/grub2/grub.cfg
+  when: grub_adjust.changed
+
+- name: Adjusting the TCP keepalive value
+  sysctl:
+    name: net.ipv4.tcp_keepalive_time
+    value: '300'
+    sysctl_set: yes
+
+- name: Reboot system
+  shell: sleep 2 && shutdown -r now
+  async: 5
+  poll: 0
+  when: disable_selinux.changed or grub_adjust.changed
+
+- name: Reestablishing the connection with the hosts
+  wait_for_connection:
+    connect_timeout: 20
+    sleep: 5
+    delay: 5
+    timeout: 300
+  when: disable_selinux.changed or grub_adjust.changed
