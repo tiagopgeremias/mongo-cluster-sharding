@@ -1,0 +1,16 @@
+# Variaveis de configuração das LVM's
+disk_path: /dev/vdb
+vg_name: vg_mongodb
+pvs_name: /dev/vdb1
+lv_name: lv_mongodb
+mount_point: /data
+file_system: ext4
+
+# Tipo de sharding cluster: configsvr/shardsvr
+cluster_role: shardsvr
+
+# Variavel de configuração das ReplicaSet
+shardings_config:
+  - { name: 'mongosrs1', port: '27017' }
+  - { name: 'mongosrs2', port: '27027' }
+  - { name: 'mongosrs3', port: '27037' }

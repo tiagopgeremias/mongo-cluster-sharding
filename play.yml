@@ -1,17 +1,25 @@
-- hosts: all
-  any_errors_fatal: true
-  remote_user: root
-  become_user: root
-  become: yes
-  roles:
-    - config_system
-    # - { role: config_lvm, when: "'shard-servers' in group_names" }
-    - install_mongo
+- hosts: teste
+  tasks:
+    - name: Teste
+      debug:
+        var: hostvars[item]['replica_set_name'] 
+      with_items: "{{ groups['shard_servers'] }}"
+  
 
-- hosts: shard-servers
-  remote_user: root
-  become_user: root
-  become: yes
-  roles:
-    - config_lvm
-    - config_shardrs
+# - hosts: router_servers
+#   roles:
+#     - config_router
+
+# - hosts: all
+#   any_errors_fatal: true
+#   roles:
+#     - config_system
+#     # - { role: config_lvm, when: "'shard-servers' in group_names" }
+
+# - hosts: replicaset-nodes
+#   remote_user: root
+#   become_user: root
+#   become: yes
+#   roles:
+#     - config_lvm
+#     - config_shardrs

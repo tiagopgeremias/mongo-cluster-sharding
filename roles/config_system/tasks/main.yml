@@ -1,9 +1,9 @@
-- name: disable SELinux
+- name: Disable SELinux
   command: setenforce 0
   ignore_errors: yes
-  register: disable_selinux
+  register: disable_setenforce
 
-- name: disable SELinux on reboot
+- name: Disable SELinux on reboot
   selinux:
     state: disabled
   ignore_errors: yes
@@ -76,7 +76,7 @@
   shell: sleep 2 && shutdown -r now
   async: 5
   poll: 0
-  when: disable_selinux.changed or grub_adjust.changed
+  when: disable_selinux.changed or disable_setenforce.changed
 
 - name: Reestablishing the connection with the hosts
   wait_for_connection:
@@ -84,4 +84,50 @@
     sleep: 5
     delay: 5
     timeout: 300
-  when: disable_selinux.changed or grub_adjust.changed
+  when: disable_selinux.changed or disable_setenforce.changed
+
+- name: Create repository MongoDB
+  blockinfile:
+    path: /etc/yum.repos.d/mongodb-org-4.4.repo
+    block: |
+      [mongodb-org-4.4]
+      name=MongoDB Repository
+      baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.4/x86_64/
+      gpgcheck=1
+      enabled=1
+      gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc
+    owner: root
+    group: root
+    create: true
+
+- name: Update System
+  yum:
+    name: '*'
+    state: latest
+
+- name: Install Mongodb
+  yum:
+    name: mongodb-org
+    state: present
+
+- name: Install LVM only in Sharding Servers
+  yum:
+    name: lvm*
+    state: present
+  when: "'shard-servers' in group_names"
+
+- name: Systemd disable mongod only in Sharding Servers
+  systemd:
+    name: "mongod"
+    enabled: no
+    state: stopped
+  when: "'shard-servers' in group_names"
+
+- name: Remove default configurarion in Sharding Servers
+  file:
+    path: "{{ item.name }}"
+    state: absent
+  loop:
+    - { name: '/etc/mongod.conf'}
+    - { name: '/usr/lib/systemd/system/mongod.service'}
+  when: "'shard-servers' in group_names"

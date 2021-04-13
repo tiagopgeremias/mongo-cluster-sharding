@@ -1,5 +1,6 @@
 #
 #   Playbook provisionamento de LVM
+#   Requer instalação do lvm*
 #   
 #       VARIAVEIS:
 #
@@ -10,22 +11,22 @@
 #   mount_point     Local onde sera o montado o logical volume
 #   file_system     Tipo de sistema de arquivos, exemplo: ext3, ext4, xfs etc.
 #   
+#   Todas variaveis estao setadas em: inventory/group_vars/shard-servers.yml
 #
 
-# - name: Update System
-#   yum:
-#     name: '*'
-#     state: latest
-    
-- name: Install LVM
-  yum:
-    name: 'lvm*'
-    state: present
-     
 - name: Verifique Partition Exists
   shell: "ls -l {{ pvs_name }} 2> /dev/null | wc -l"
   register: part_exists
-  
+
+- name: Create mount-point DB directory
+  file:
+    path: "{{ mount_point }}"
+    mode: '0755'
+    state: directory
+    owner: mongod
+    group: mongod
+  when: part_exists.stdout == "0"
+
 - name: Create Partition
   parted:
     device: "{{ disk_path }}"
@@ -79,3 +80,11 @@
     delay: 5
     timeout: 300
   when: config_readahead.changed
+
+- name: Force owner in mount-point DB directory
+  file:
+    path: "{{ mount_point }}"
+    state: directory
+    recurse: yes
+    owner: mongod
+    group: mongod

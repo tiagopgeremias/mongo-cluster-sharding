@@ -30,9 +30,9 @@ net:
   port: {{ item.port }}
   bindIp: 0.0.0.0  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.
 
-# Role shardsvr
+# Tipo de sharding cluster: configsvr/shardsvr
 sharding:
-  clusterRole: shardsvr
+  clusterRole: {{ cluster_role }}
 
 #	replica set
 replication:

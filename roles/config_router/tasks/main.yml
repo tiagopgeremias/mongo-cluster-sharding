@@ -1,0 +1,48 @@
+- name: Create configurations file
+  template:
+    src: mongodb_router.conf.j2
+    dest: /etc/mongos.xonf
+
+
+- name: Create systemd configuration
+  blockinfile:
+    path: /etc/systemd/system/mongos
+    block: |
+      [Unit]
+      Description=High-performance, schema-free document-oriented database
+      After=syslog.target
+      After=network.target
+
+      [Service]
+      User=mongodb
+      Group=mongodb
+      Type=forking
+      RuntimeDirectory=mongodb
+      RuntimeDirectoryMode=755
+      PIDFile=/var/run/mongodb/mongos.pid
+      ExecStart=/usr/bin/mongos --quiet \
+          --config /etc/mongos.conf \
+          --pidfilepath /var/run/mongodb/mongos.pid \
+          --fork
+      LimitFSIZE=infinity
+      LimitCPU=infinity
+      LimitAS=infinity
+      LimitNOFILE=64000
+      LimitNPROC=64000
+      [Install]
+      WantedBy=multi-user.target
+    owner: root
+    group: root
+    create: true
+
+- name: Systemd enable Mongo QueryRouter
+  systemd:
+    name: mongos
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: MongoDB add Sharding
+  shell: "mongo --eval \"sh.addShard('{{ hostvars[item]['replica_set_name']  }}/{{ item }}')\""
+  with_items: "{{ groups['shard_servers'] }}"
+  

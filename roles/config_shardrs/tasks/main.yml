@@ -1,3 +1,8 @@
+#
+# Anotações importantes para execução da task.
+#  
+# - Variavel shardings_config, suas propriedades estão em inventory/group_vars/shard-servers.yml
+
 - name: Create systemd configuration
   blockinfile:
     path: "/etc/systemd/system/{{ item.name }}.service"
@@ -66,3 +71,41 @@
     dest: /etc/mongod/{{ item.name }}.conf
   loop: "{{ shardings_config }}"
 
+- name: Systemd enable cluster mongo
+  systemd:
+    name: "{{ item.name }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  loop: "{{ shardings_config }}"
+
+- name: Initialize ReplicaSet cluster
+  shell: "mongo --eval 'rs.initiate({_id : \"{{ replica_set_name }}\", members: [{ _id : 0, host : \"{{ ansible_host }}:{{ shardings_config[0].name }}\" },{ _id : 1, host : \"{{ ansible_host }}:{{ shardings_config[1].name }}\" },{ _id : 2, host : \"{{ ansible_host }}:{{ shardings_config[2].name }}\" }]})'"
+
+- name: Create script user admin
+  blockinfile:
+    path: /tmp/create_admin_user.js
+    block: |
+      db = db.getSiblingDB('admin');
+      db.createUser({
+        user: "{{ user_admin }}", 
+        pwd:"{{ pass_admin }}",
+        roles: [
+          { role: "userAdminAnyDatabase", db: "admin" },
+          { role: "dbAdminAnyDatabase", db: "admin" },
+          { role: "readWriteAnyDatabase", db:"admin" },
+          { role: "clusterAdmin",  db: "admin" }
+        ]
+      });
+    owner: root
+    group: root
+    create: true
+
+- name: Execute script user admin
+  shell: "mongo /tmp/create_admin_user.js"
+
+- name: Delete script user admin
+  file:
+    path: /tmp/create_admin_user.js
+    state: absent
+  
