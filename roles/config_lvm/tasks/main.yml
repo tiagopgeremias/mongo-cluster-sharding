@@ -65,8 +65,7 @@
 - name: Configure Readahead
   shell: "/sbin/blockdev --setra 25 $(df -h | grep {{ mount_point }} | awk '{print $1}')"
   register: config_readahead
-  when: "'shard-servers' in group_names"
-
+  
 - name: Reboot system
   shell: sleep 2 && shutdown -r now
   async: 5

@@ -1,0 +1,29 @@
+- name: Lookup PRIMARY replicaset member
+  community.mongodb.mongodb_status:
+    replica_set: "{{ replica_set_name }}"
+  register: replicaset
+
+- name: Debug
+  debug:
+    msg: "{{ replicaset.replicaset|length  }}"
+
+- name: Lookup PRIMARY replicaset member
+  set_fact:
+    primary_rs: "{{ item.key.split(':')[0] }}"
+  with_items: "{{ lookup('dict', replicaset.replicaset) }}"
+  when: "'PRIMARY' in item.value"
+  register: teste
+  ignore_errors: true
+
+- name: Debug
+  debug:
+    msg: "{{ teste }}"
+
+
+- name: "[Sharding] Create Database user administrator Shard"
+  mongodb_user:
+    database: "admin"
+    name: "{{ user_admin }}"
+    password: "{{ pass_admin }}"
+    roles: "root"
+  delegate_to: "{{ primary_rs }}"

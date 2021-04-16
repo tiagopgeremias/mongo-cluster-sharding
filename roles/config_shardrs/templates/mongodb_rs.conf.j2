@@ -5,11 +5,11 @@
 systemLog:
   destination: file
   logAppend: true
-  path: /var/log/mongodb/{{ item.name }}.log
+  path: /var/log/mongodb/mongod.log
 
 # Where and how to store data.
 storage:
-  dbPath: /data/{{ item.name }}
+  dbPath: /data
   journal:
     enabled: true
 #  engine:
@@ -18,7 +18,7 @@ storage:
 # how the process runs
 processManagement:
   fork: true  # fork and run in background
-  pidFilePath: /var/run/mongodb/{{ item.name }}.pid  # location of pidfile
+  pidFilePath: /var/run/mongodb/mongod.pid  # location of pidfile
   timeZoneInfo: /usr/share/zoneinfo
 
 # security
@@ -27,7 +27,7 @@ processManagement:
 
 # network interfaces
 net:
-  port: {{ item.port }}
+  port: 27017
   bindIp: 0.0.0.0  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.
 
 # Tipo de sharding cluster: configsvr/shardsvr
@@ -36,4 +36,4 @@ sharding:
 
 #	replica set
 replication:
-   replSetName: "{{ replica_set_name }}"
+  replSetName: "{{ replica_set_name }}"

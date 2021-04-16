@@ -1,7 +1,7 @@
 # Variaveis de configuração das LVM's
-disk_path: /dev/vdb
+disk_path: /dev/sdb
 vg_name: vg_mongodb
-pvs_name: /dev/vdb1
+pvs_name: /dev/sdb1
 lv_name: lv_mongodb
 mount_point: /data
 file_system: ext4
@@ -11,9 +11,3 @@ cluster_role: configsvr
 
 # Nome da ReplicaSet
 replica_set_name: confrs1
-
-# Variavel de configuração das ReplicaSet
-shardings_config:
-  - { name: 'mongocrs1', port: '27017' }
-  - { name: 'mongocrs2', port: '27027' }
-  - { name: 'mongocrs3', port: '27037' }

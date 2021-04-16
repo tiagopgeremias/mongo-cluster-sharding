@@ -1,7 +1,7 @@
 - name: Create configurations file
   template:
     src: mongodb_router.conf.j2
-    dest: /etc/mongos.xonf
+    dest: /etc/mongos.conf
 
 
 - name: Create systemd configuration
@@ -42,7 +42,12 @@
     state: started
     daemon_reload: yes
 
-- name: MongoDB add Sharding
-  shell: "mongo --eval \"sh.addShard('{{ hostvars[item]['replica_set_name']  }}/{{ item }}')\""
+# - name: MongoDB add Sharding
+#   shell: "mongo --eval \"sh.addShard('{{ hostvars[item]['replica_set_name']  }}/{{ item }}')\""
+#   with_items: "{{ groups['shard_servers'] }}"
+
+- name: Add a standalone mongod shard running on port 27018 of mongodb0.example.net
+  mongodb_shard:
+    shard: "{{ hostvars[item]['replica_set_name']  }}/{{ item }}"
+    state: present
   with_items: "{{ groups['shard_servers'] }}"
-  

@@ -1,133 +1,135 @@
-- name: Disable SELinux
-  command: setenforce 0
-  ignore_errors: yes
-  register: disable_setenforce
+# - name: Disable SELinux
+#   command: setenforce 0
+#   ignore_errors: yes
+#   register: disable_setenforce
 
-- name: Disable SELinux on reboot
-  selinux:
-    state: disabled
-  ignore_errors: yes
-  register: disable_selinux
+# - name: Disable SELinux on reboot
+#   selinux:
+#     state: disabled
+#   ignore_errors: yes
+#   register: disable_selinux
 
-- name: Configure Limits for open files
-  template:
-    src: 99-mongodb-nproc.conf.j2
-    dest: /etc/security/limits.d/99-mongodb-nproc.conf
-    owner: root
-    group: root
-    mode: '0644'
-  register: config_limits
+# - name: Configure Limits for open files
+#   template:
+#     src: 99-mongodb-nproc.conf.j2
+#     dest: /etc/security/limits.d/99-mongodb-nproc.conf
+#     owner: root
+#     group: root
+#     mode: '0644'
+#   register: config_limits
 
-- name: Define Limits for system
-  shell: "{{ item }}"
-  with_items:
-    - ulimit -f unlimited
-    - ulimit -t unlimited
-    - ulimit -v unlimited
-    - ulimit -l unlimited
-    - ulimit -m unlimited
-    - ulimit -n 64000
-    - ulimit -u 64000
+# - name: Define Limits for system
+#   shell: "{{ item }}"
+#   with_items:
+#     - ulimit -f unlimited
+#     - ulimit -t unlimited
+#     - ulimit -v unlimited
+#     - ulimit -l unlimited
+#     - ulimit -m unlimited
+#     - ulimit -n 64000
+#     - ulimit -u 64000
 
-- name: Configure sufficient file handles
-  sysctl:
-    name: fs.file-max
-    value: '98000'
-    sysctl_set: yes
+# - name: Configure sufficient file handles
+#   sysctl:
+#     name: fs.file-max
+#     value: '98000'
+#     sysctl_set: yes
 
-- name: Configure kernel pid limit
-  sysctl:
-    name: kernel.pid_max
-    value: '64000'
-    sysctl_set: yes
+# - name: Configure kernel pid limit
+#   sysctl:
+#     name: kernel.pid_max
+#     value: '64000'
+#     sysctl_set: yes
 
-- name: Configure maximum threads per process
-  sysctl:
-    name: kernel.threads-max
-    value: '64000'
-    sysctl_set: yes
+# - name: Configure maximum threads per process
+#   sysctl:
+#     name: kernel.threads-max
+#     value: '64000'
+#     sysctl_set: yes
 
-- name: Configure maximum number of memory map areas per process
-  sysctl:
-    name: vm.max_map_count
-    value: '128000'
-    sysctl_set: yes
+# - name: Configure maximum number of memory map areas per process
+#   sysctl:
+#     name: vm.max_map_count
+#     value: '128000'
+#     sysctl_set: yes
 
-- name: Disable Transparent Huge pages - Grub Adjust
-  template:
-    src: grub
-    dest: /etc/default/grub
-    owner: root
-    group: root
-    mode: '0644'
-  register: grub_adjust
+# - name: Create tune directory for Transparent 
+#   file:
+#     path: /etc/tuned/virtual-guest-no-thp
+#     state: directory
+    
+# - name: Configuration file Transparent Huge pages
+#   blockinfile:
+#     path: /etc/tuned/virtual-guest-no-thp/tuned.conf
+#     block: |
+#       [main]
+#       include=virtual-guest
+#       [vm]
+#       transparent_hugepages=never
+#     owner: root
+#     group: root
+#     create: true
 
-- name: Disable Transparent Huge pages - Grub recompile
-  shell: grub2-mkconfig -o /boot/grub2/grub.cfg
-  when: grub_adjust.changed
+# - name: Enable tuned profile Transparent Huge Pages
+#   shell: tuned-adm profile virtual-guest-no-thp
 
-- name: Adjusting the TCP keepalive value
-  sysctl:
-    name: net.ipv4.tcp_keepalive_time
-    value: '300'
-    sysctl_set: yes
+# - name: Adjusting the TCP keepalive value
+#   sysctl:
+#     name: net.ipv4.tcp_keepalive_time
+#     value: '300'
+#     sysctl_set: yes
 
-- name: Reboot system
-  shell: sleep 2 && shutdown -r now
-  async: 5
-  poll: 0
-  when: disable_selinux.changed or disable_setenforce.changed
+# - name: Create repository MongoDB
+#   blockinfile:
+#     path: /etc/yum.repos.d/mongodb-org-4.4.repo
+#     block: |
+#       [mongodb-org-4.4]
+#       name=MongoDB Repository
+#       baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.4/x86_64/
+#       gpgcheck=1
+#       enabled=1
+#       gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc
+#     owner: root
+#     group: root
+#     create: true
 
-- name: Reestablishing the connection with the hosts
-  wait_for_connection:
-    connect_timeout: 20
-    sleep: 5
-    delay: 5
-    timeout: 300
-  when: disable_selinux.changed or disable_setenforce.changed
+# - name: Update System
+#   yum:
+#     name: '*'
+#     state: latest
 
-- name: Create repository MongoDB
-  blockinfile:
-    path: /etc/yum.repos.d/mongodb-org-4.4.repo
-    block: |
-      [mongodb-org-4.4]
-      name=MongoDB Repository
-      baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.4/x86_64/
-      gpgcheck=1
-      enabled=1
-      gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc
-    owner: root
-    group: root
-    create: true
+# - name: Reboot system
+#   shell: sleep 2 && shutdown -r now
+#   async: 5
+#   poll: 0
+#   when: disable_selinux.changed or disable_setenforce.changed
 
-- name: Update System
+# - name: Reestablishing the connection with the hosts
+#   wait_for_connection:
+#     connect_timeout: 20
+#     sleep: 5
+#     delay: 5
+#     timeout: 300
+#   when: disable_selinux.changed or disable_setenforce.changed
+
+- name: Install Mongodb and Dependencies
   yum:
-    name: '*'
-    state: latest
-
-- name: Install Mongodb
-  yum:
-    name: mongodb-org
+    name: "{{ item }}"
     state: present
+  loop:
+    - mongodb-org
+    - epel-release
+    - python-pip
 
 - name: Install LVM only in Sharding Servers
   yum:
     name: lvm*
     state: present
-  when: "'shard-servers' in group_names"
+  when: "'replicaset_nodes' in group_names"
 
-- name: Systemd disable mongod only in Sharding Servers
-  systemd:
-    name: "mongod"
-    enabled: no
-    state: stopped
-  when: "'shard-servers' in group_names"
-
-- name: Remove default configurarion in Sharding Servers
-  file:
-    path: "{{ item.name }}"
-    state: absent
+- name: Python modules
+  pip:
+    name: "{{ item }}"
   loop:
-    - { name: '/etc/mongod.conf'}
-    - { name: '/usr/lib/systemd/system/mongod.service'}
-  when: "'shard-servers' in group_names"
+    - setuptools
+    - pymongo

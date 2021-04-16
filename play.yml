@@ -1,9 +1,10 @@
-- hosts: teste
-  tasks:
-    - name: Teste
-      debug:
-        var: hostvars[item]['replica_set_name'] 
-      with_items: "{{ groups['shard_servers'] }}"
+# - hosts: teste
+#   tasks:
+#     - name: Teste
+#       debug:
+#         # var: hostvars[item]['replica_set_name'] 
+#         var: item
+#       with_items: "{{ groups['shard_servers'] }}"
   
 
 # - hosts: router_servers
@@ -11,15 +12,38 @@
 #     - config_router
 
 # - hosts: all
+#   become: yes
 #   any_errors_fatal: true
 #   roles:
 #     - config_system
-#     # - { role: config_lvm, when: "'shard-servers' in group_names" }
+#   environment:
+#     - http_proxy: http://10.11.100.250:8082
+#     - https_proxy: http://10.11.100.250:8082
 
-# - hosts: replicaset-nodes
-#   remote_user: root
-#   become_user: root
-#   become: yes
-#   roles:
-#     - config_lvm
-#     - config_shardrs
+- hosts: replicaset_nodes
+  become: yes
+  roles:
+    # - config_lvm
+    - config_shardrs
+
+# - hosts: replicaset_nodes
+#   tasks:
+#     - name: Get Subgroups Config Server
+#       set_fact:
+#         subgroups: "{{ subgroups|default([]) + hostvars[item].group_names }}"
+#       loop: "{{ groups.shard_servers }}"
+#       run_once: true
+
+#     - name: Get only on group Config Server
+#       set_fact:
+#         shards_nodes: "{{ subgroups|unique|difference(['replicaset_nodes'])|difference(['shard_servers']) }}"
+#       run_once: true
+
+#     - name: Debug
+#       debug:
+#         msg: "{{ shards_nodes }}"
+#       run_once: true
+      
+
+    
+      

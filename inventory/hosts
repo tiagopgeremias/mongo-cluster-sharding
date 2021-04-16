@@ -1,13 +1,10 @@
 [all:vars]
-remote_user=root
+remote_user=ansible
 become_user=root
-become=yes
 
-[teste]
-localhost
-
-# [router_servers]
-# 10.0.0.50
+[router_servers]
+# YildumTST400 
+10.11.101.216
 
 
 [replicaset_nodes:children]
@@ -18,19 +15,20 @@ shard_servers
 configrs1
 
 [configrs1]
-10.0.0.51 primary=yes 
+# YildumTST401
+10.11.101.217 primary=yes
 
 
 [shard_servers:children]
 shard1
-shard2
-shard3
 
 [shard1]
-10.0.0.52 primary=yes
+# YildumTST402-1
+10.11.101.218 primary=yes
 
-[shard2]
-10.0.0.53 primary=yes
+# YildumTST402-2
+10.11.101.226
 
-[shard3]
-10.0.0.54 primary=yes
+# YildumTST402-3
+10.11.101.227
+

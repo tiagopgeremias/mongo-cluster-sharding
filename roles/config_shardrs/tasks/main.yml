@@ -3,109 +3,107 @@
 #  
 # - Variavel shardings_config, suas propriedades estão em inventory/group_vars/shard-servers.yml
 
-- name: Create systemd configuration
-  blockinfile:
-    path: "/etc/systemd/system/{{ item.name }}.service"
-    block: |
-      [Unit]
-      Description=MongoDB Database Server
-      Documentation=https://docs.mongodb.org/manual
-      After=network-online.target
-      Wants=network-online.target
+# - name: Install bottle python package
+#   yum:
+#     name: "{{ item }}"
+#     state: present
+#   loop:
+#     - epel-release
+#     - python-pip
+#   environment:
+#     - http_proxy: http://10.11.100.250:8082
+#     - https_proxy: http://10.11.100.250:8082
 
-      [Service]
-      User=mongod
-      Group=mongod
-      Environment="OPTIONS=-f /etc/mongod/{{ item.name }}.conf"
-      EnvironmentFile=-/etc/sysconfig/mongod
-      ExecStart=/usr/bin/mongod $OPTIONS
-      ExecStartPre=/usr/bin/mkdir -p /var/run/mongodb
-      ExecStartPre=/usr/bin/chown mongod:mongod /var/run/mongodb
-      ExecStartPre=/usr/bin/chmod 0755 /var/run/mongodb
-      PermissionsStartOnly=true
-      PIDFile=/var/run/mongodb/{{ item.name }}.pid
-      Type=forking
-      # file size
-      LimitFSIZE=infinity
-      # cpu time
-      LimitCPU=infinity
-      # virtual memory size
-      LimitAS=infinity
-      # open files
-      LimitNOFILE=64000
-      # processes/threads
-      LimitNPROC=64000
-      # locked memory
-      LimitMEMLOCK=infinity
-      # total threads (user+kernel)
-      TasksMax=infinity
-      TasksAccounting=false
-      # Recommended limits for mongod as specified in
-      # https://docs.mongodb.com/manual/reference/ulimit/#recommended-ulimit-settings
-
-      [Install]
-      WantedBy=multi-user.target
-    owner: root
-    group: root
-    create: true
-  loop: "{{ shardings_config }}"
-
-- name: Create MongoDB Directory Configuration 
-  file:
-    path: /etc/mongod
-    state: directory
-    mode: '0755'
-
-- name: Create directory data ReplicaSet
-  file:
-    path: "/data/{{ item.name }}"
-    state: directory
-    mode: '0755'
-    owner: mongod
-    group: mongod
-  loop: "{{ shardings_config }}"
-
-- name: Create configurations files
-  template:
-    src: mongodb_rs.conf.j2
-    dest: /etc/mongod/{{ item.name }}.conf
-  loop: "{{ shardings_config }}"
-
-- name: Systemd enable cluster mongo
-  systemd:
-    name: "{{ item.name }}"
-    enabled: yes
-    state: started
-    daemon_reload: yes
-  loop: "{{ shardings_config }}"
-
-- name: Initialize ReplicaSet cluster
-  shell: "mongo --eval 'rs.initiate({_id : \"{{ replica_set_name }}\", members: [{ _id : 0, host : \"{{ ansible_host }}:{{ shardings_config[0].name }}\" },{ _id : 1, host : \"{{ ansible_host }}:{{ shardings_config[1].name }}\" },{ _id : 2, host : \"{{ ansible_host }}:{{ shardings_config[2].name }}\" }]})'"
-
-- name: Create script user admin
-  blockinfile:
-    path: /tmp/create_admin_user.js
-    block: |
-      db = db.getSiblingDB('admin');
-      db.createUser({
-        user: "{{ user_admin }}", 
-        pwd:"{{ pass_admin }}",
-        roles: [
-          { role: "userAdminAnyDatabase", db: "admin" },
-          { role: "dbAdminAnyDatabase", db: "admin" },
-          { role: "readWriteAnyDatabase", db:"admin" },
-          { role: "clusterAdmin",  db: "admin" }
-        ]
-      });
-    owner: root
-    group: root
-    create: true
-
-- name: Execute script user admin
-  shell: "mongo /tmp/create_admin_user.js"
-
-- name: Delete script user admin
-  file:
-    path: /tmp/create_admin_user.js
-    state: absent
+# - name: Install bottle python package
+#   pip:
+#     name: "{{ item }}"
+#   loop:
+#     - setuptools
+#     - pymongo
+#   environment:
+#     - http_proxy: http://10.11.100.250:8082
+#     - https_proxy: http://10.11.100.250:8082
   
+# - name: Create configurations files
+#   template:
+#     src: mongodb_rs.conf.j2
+#     dest: /etc/mongod.conf
+
+# - name: Systemd enable cluster mongo
+#   systemd:
+#     name: mongod
+#     enabled: yes
+#     state: restarted
+#     daemon_reload: yes
+
+# #
+# # Shards Replicaser Config
+# #
+
+# - name: "[Sharding] Get Subgroups Shard Server"
+#   set_fact:
+#     subgroups: "{{ subgroups|default([]) + hostvars[item].group_names }}"
+#   loop: "{{ groups.shard_servers }}"
+#   run_once: true
+
+# - name: "[Sharding] Get only on group Shard Server"
+#   set_fact:
+#     shards_nodes: "{{ subgroups|unique|difference(['replicaset_nodes'])|difference(['shard_servers']) }}"
+#   run_once: true
+
+# - name: "[Sharding] Add Storage nodes in replicaset"
+#   mongodb_replicaset:
+#     login_host: localhost
+#     replica_set: "{{ replica_set_name }}"
+#     members: "{{ groups[item]|join(',') }}"
+#     validate: no
+#   with_items: "{{ shards_nodes }}"
+#   when: "primary is defined and 'shard_servers' in hostvars[ansible_host]['group_names']"
+
+# - name: "[Sharding] Waiting start replicaset"
+#   wait_for:
+#     timeout: 15
+
+# - name: Include task list in play only if the condition is true
+#   include_tasks: "shardingrs.yml"
+#   when: "primary is defined and 'shard_servers' in hostvars[ansible_host]['group_names']"
+
+- name: Include task list in play only if the condition is true
+  include_tasks: "shardingrs.yml"
+  when: "primary is defined and 'config_servers' in hostvars[ansible_host]['group_names']"
+
+#
+# ConfigServer Replicaser Config
+#
+
+# - name: "[ConfigSrv] Get Subgroups Config Server"
+#   set_fact:
+#     subgroups_configsrv: "{{ subgroups_configsrv|default([]) + hostvars[item].group_names }}"
+#   loop: "{{ groups.config_servers }}"
+#   run_once: true
+
+# - name: "[ConfigSrv] Get only on group Config Server"
+#   set_fact:
+#     configsrv: "{{ subgroups_configsrv|unique|difference(['replicaset_nodes'])|difference(['config_servers']) }}"
+#   run_once: true
+
+# - name: "[ConfigSrv] Add Storage nodes in replicaset ConfigServer"
+#   mongodb_replicaset:
+#     login_host: localhost
+#     replica_set: "{{ replica_set_name }}"
+#     members: "{{ groups[item]|join(',') }}"
+#     validate: no
+#   with_items: "{{configsrv}}"
+#   when: "primary is defined and 'config_servers' in hostvars[ansible_host]['group_names']"
+
+# - name: "[ConfigSrv] Waiting start replicaset"
+#   wait_for:
+#     timeout: 15
+
+# - name: "[ConfigSrv] Create Database user administrator for ConfigServ"
+#   mongodb_user:
+#     database: "admin"
+#     name: "{{ user_admin }}"
+#     password: "{{ pass_admin }}"
+#     roles: "root"
+#   when: "primary is defined and 'config_servers' in hostvars[ansible_host]['group_names']"
