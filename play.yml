@@ -20,30 +20,51 @@
 #     - http_proxy: http://10.11.100.250:8082
 #     - https_proxy: http://10.11.100.250:8082
 
-- hosts: replicaset_nodes
-  become: yes
-  roles:
-    # - config_lvm
-    - config_shardrs
-
 # - hosts: replicaset_nodes
-#   tasks:
-#     - name: Get Subgroups Config Server
-#       set_fact:
-#         subgroups: "{{ subgroups|default([]) + hostvars[item].group_names }}"
-#       loop: "{{ groups.shard_servers }}"
-#       run_once: true
+#   become: yes
+#   roles:
+#     - config_lvm
+#     - config_shardrs
 
-#     - name: Get only on group Config Server
-#       set_fact:
-#         shards_nodes: "{{ subgroups|unique|difference(['replicaset_nodes'])|difference(['shard_servers']) }}"
-#       run_once: true
-
-#     - name: Debug
-#       debug:
-#         msg: "{{ shards_nodes }}"
-#       run_once: true
-      
-
+# - hosts: router_servers
+#   become: yes
+#   roles:
+#     - config_router
     
+
+- hosts: localhost
+  tasks:
+    - name: "[ConfigSrv] Get Subgroups Config Server"
+      set_fact:
+        subgroups_configsrv: "{{ subgroups_configsrv|default([]) + hostvars[item].group_names }}"
+      loop: "{{ groups.config_servers }}"
+      run_once: true
+
+    - name: "[ConfigSrv] Get only on group Config Server"
+      set_fact:
+        configsrv: "{{ subgroups_configsrv|unique|difference(['replicaset_nodes'])|difference(['config_servers']) }}"
+      run_once: true
+
+    - name: Debug
+      debug:
+        msg: "{{ groups.config_servers }}"
+
+    - name: "[ConfigSrv] Add Storage nodes in replicaset ConfigServer"
+      set_fact:
+        members: "{{ groups.config_servers|join(',') }}"
+      with_items: "{{ groups.config_servers }}"
+    
+    - name: Members
+      debug:
+        msg: "{{ members }}"
+
+    - name: Debug
+      debug:
+        msg: "{{ hostvars[members.split(',')[0]]['replica_set_name'] }}"
+      
+    - name: Debug
+      debug:
+        msg: "config_servers/{{ members }}"
+
+
       

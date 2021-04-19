@@ -1,24 +1,71 @@
+#
+# Shards Replicaser Config
+# 
+- name: "[Sharding] Get Subgroups Shard Server"
+  set_fact:
+    subgroups: "{{ subgroups|default([]) + hostvars[item].group_names }}"
+  loop: "{{ groups.shard_servers }}"
+  run_once: true
+
+- name: "[Sharding] Get only on group Shard Server"
+  set_fact:
+    shards_nodes: "{{ subgroups|unique|difference(['replicaset_nodes'])|difference(['shard_servers']) }}"
+  run_once: true
+
+- name: "[Sharding] Add Storage nodes in replicaset"
+  mongodb_replicaset:
+    login_host: localhost
+    replica_set: "{{ replica_set_name }}"
+    members: "{{ groups[item]|join(',') }}"
+    validate: no
+  with_items: "{{ shards_nodes }}"
+  when: "primary is defined and 'shard_servers' in hostvars[ansible_host]['group_names']"
+
+#
+# ConfigServer Replicaser Config
+#
+- name: "[ConfigSrv] Get Subgroups Config Server"
+  set_fact:
+    subgroups_configsrv: "{{ subgroups_configsrv|default([]) + hostvars[item].group_names }}"
+  loop: "{{ groups.config_servers }}"
+  run_once: true
+
+- name: "[ConfigSrv] Get only on group Config Server"
+  set_fact:
+    configsrv: "{{ subgroups_configsrv|unique|difference(['replicaset_nodes'])|difference(['config_servers']) }}"
+  run_once: true
+
+- name: "[ConfigSrv] Add Storage nodes in replicaset ConfigServer"
+  mongodb_replicaset:
+    login_host: localhost
+    replica_set: "{{ replica_set_name }}"
+    members: "{{ groups[item]|join(',') }}"
+    validate: no
+  with_items: "{{configsrv}}"
+  when: "primary is defined  and 'config_servers' in hostvars[ansible_host]['group_names']"
+
+- name: Waiting 30 seconds to MongoDB ready
+  wait_for:
+    timeout: 30
+
 - name: Lookup PRIMARY replicaset member
   community.mongodb.mongodb_status:
     replica_set: "{{ replica_set_name }}"
   register: replicaset
+  when: "primary is defined"
 
-- name: Debug
-  debug:
-    msg: "{{ replicaset.replicaset|length  }}"
-
-- name: Lookup PRIMARY replicaset member
+- name: Get primary node in multiples nodes
   set_fact:
     primary_rs: "{{ item.key.split(':')[0] }}"
   with_items: "{{ lookup('dict', replicaset.replicaset) }}"
   when: "'PRIMARY' in item.value"
-  register: teste
   ignore_errors: true
 
-- name: Debug
-  debug:
-    msg: "{{ teste }}"
-
+- name: Get primary node in sigle node
+  set_fact:
+    primary_rs: "{{ item.split(':')[0] }}"
+  with_items: "{{ replicaset.replicaset.keys() }}"
+  when: (replicaset.replicaset|length) == 1
 
 - name: "[Sharding] Create Database user administrator Shard"
   mongodb_user:

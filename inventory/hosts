@@ -1,5 +1,6 @@
 [all:vars]
-remote_user=ansible
+ansible_user=root
+remote_user=root
 become_user=root
 
 [router_servers]
@@ -17,6 +18,8 @@ configrs1
 [configrs1]
 # YildumTST401
 10.11.101.217 primary=yes
+10.11.101.219
+10.11.101.220
 
 
 [shard_servers:children]

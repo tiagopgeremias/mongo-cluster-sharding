@@ -3,107 +3,29 @@
 #  
 # - Variavel shardings_config, suas propriedades estão em inventory/group_vars/shard-servers.yml
 
-# - name: Install bottle python package
-#   yum:
-#     name: "{{ item }}"
-#     state: present
-#   loop:
-#     - epel-release
-#     - python-pip
-#   environment:
-#     - http_proxy: http://10.11.100.250:8082
-#     - https_proxy: http://10.11.100.250:8082
+- name: Create configurations files
+  template:
+    src: mongodb_rs.conf.j2
+    dest: /etc/mongod.conf
 
-# - name: Install bottle python package
-#   pip:
-#     name: "{{ item }}"
-#   loop:
-#     - setuptools
-#     - pymongo
-#   environment:
-#     - http_proxy: http://10.11.100.250:8082
-#     - https_proxy: http://10.11.100.250:8082
-  
-# - name: Create configurations files
-#   template:
-#     src: mongodb_rs.conf.j2
-#     dest: /etc/mongod.conf
+- name: Systemd enable cluster mongo
+  systemd:
+    name: mongod
+    enabled: yes
+    state: restarted
+    daemon_reload: yes
 
-# - name: Systemd enable cluster mongo
-#   systemd:
-#     name: mongod
-#     enabled: yes
-#     state: restarted
-#     daemon_reload: yes
-
-# #
-# # Shards Replicaser Config
-# #
-
-# - name: "[Sharding] Get Subgroups Shard Server"
-#   set_fact:
-#     subgroups: "{{ subgroups|default([]) + hostvars[item].group_names }}"
-#   loop: "{{ groups.shard_servers }}"
-#   run_once: true
-
-# - name: "[Sharding] Get only on group Shard Server"
-#   set_fact:
-#     shards_nodes: "{{ subgroups|unique|difference(['replicaset_nodes'])|difference(['shard_servers']) }}"
-#   run_once: true
-
-# - name: "[Sharding] Add Storage nodes in replicaset"
-#   mongodb_replicaset:
-#     login_host: localhost
-#     replica_set: "{{ replica_set_name }}"
-#     members: "{{ groups[item]|join(',') }}"
-#     validate: no
-#   with_items: "{{ shards_nodes }}"
-#   when: "primary is defined and 'shard_servers' in hostvars[ansible_host]['group_names']"
-
-# - name: "[Sharding] Waiting start replicaset"
-#   wait_for:
-#     timeout: 15
-
-# - name: Include task list in play only if the condition is true
-#   include_tasks: "shardingrs.yml"
-#   when: "primary is defined and 'shard_servers' in hostvars[ansible_host]['group_names']"
-
+#
+# Shards Replicaser Config
+#
 - name: Include task list in play only if the condition is true
   include_tasks: "shardingrs.yml"
-  when: "primary is defined and 'config_servers' in hostvars[ansible_host]['group_names']"
+  when: "primary is defined and 'shard_servers' in hostvars[ansible_host]['group_names']"
 
 #
 # ConfigServer Replicaser Config
 #
+- name: Include task list in play only if the condition is true
+  include_tasks: "shardingrs.yml"
+  when: "primary is defined and 'config_servers' in hostvars[ansible_host]['group_names']"
 
-# - name: "[ConfigSrv] Get Subgroups Config Server"
-#   set_fact:
-#     subgroups_configsrv: "{{ subgroups_configsrv|default([]) + hostvars[item].group_names }}"
-#   loop: "{{ groups.config_servers }}"
-#   run_once: true
-
-# - name: "[ConfigSrv] Get only on group Config Server"
-#   set_fact:
-#     configsrv: "{{ subgroups_configsrv|unique|difference(['replicaset_nodes'])|difference(['config_servers']) }}"
-#   run_once: true
-
-# - name: "[ConfigSrv] Add Storage nodes in replicaset ConfigServer"
-#   mongodb_replicaset:
-#     login_host: localhost
-#     replica_set: "{{ replica_set_name }}"
-#     members: "{{ groups[item]|join(',') }}"
-#     validate: no
-#   with_items: "{{configsrv}}"
-#   when: "primary is defined and 'config_servers' in hostvars[ansible_host]['group_names']"
-
-# - name: "[ConfigSrv] Waiting start replicaset"
-#   wait_for:
-#     timeout: 15
-
-# - name: "[ConfigSrv] Create Database user administrator for ConfigServ"
-#   mongodb_user:
-#     database: "admin"
-#     name: "{{ user_admin }}"
-#     password: "{{ pass_admin }}"
-#     roles: "root"
-#   when: "primary is defined and 'config_servers' in hostvars[ansible_host]['group_names']"
