@@ -24,25 +24,20 @@
 #
 # ConfigServer Replicaser Config
 #
-- name: "[ConfigSrv] Get Subgroups Config Server"
-  set_fact:
-    subgroups_configsrv: "{{ subgroups_configsrv|default([]) + hostvars[item].group_names }}"
-  loop: "{{ groups.config_servers }}"
-  run_once: true
-
-- name: "[ConfigSrv] Get only on group Config Server"
-  set_fact:
-    configsrv: "{{ subgroups_configsrv|unique|difference(['replicaset_nodes'])|difference(['config_servers']) }}"
-  run_once: true
 
 - name: "[ConfigSrv] Add Storage nodes in replicaset ConfigServer"
   mongodb_replicaset:
     login_host: localhost
+    login_port: "{{ replica_set_port }}"
     replica_set: "{{ replica_set_name }}"
-    members: "{{ groups[item]|join(',') }}"
+    members: "{{ item }}:{{ replica_set_port }}"
     validate: no
-  with_items: "{{configsrv}}"
+  with_items: "{{groups.config_servers}}"
   when: "primary is defined  and 'config_servers' in hostvars[ansible_host]['group_names']"
+
+#
+# Common configurations
+#
 
 - name: Waiting 30 seconds to MongoDB ready
   wait_for:
@@ -51,6 +46,7 @@
 - name: Lookup PRIMARY replicaset member
   community.mongodb.mongodb_status:
     replica_set: "{{ replica_set_name }}"
+    login_port: "{{ replica_set_port }}"
   register: replicaset
   when: "primary is defined"
 
@@ -67,8 +63,10 @@
   with_items: "{{ replicaset.replicaset.keys() }}"
   when: (replicaset.replicaset|length) == 1
 
-- name: "[Sharding] Create Database user administrator Shard"
+- name: "Create Database user administrator"
   mongodb_user:
+    login_host: "{{ primary_rs }}"
+    login_port: "{{ replica_set_port }}"
     database: "admin"
     name: "{{ user_admin }}"
     password: "{{ pass_admin }}"

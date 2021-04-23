@@ -18,6 +18,6 @@ net:
 
 # ConfigDB
 sharding:
-  configDB: {{ hostvars[groups['config_servers'][0]]['replica_set_name'] }}/{% for item_host in groups['configrs1'] %}{% for shardings_config in hostvars[item_host]['shardings_config'] %}{{ item_host+":"+shardings_config['port'] }}{% if loop.index < loop.length %}{{ "," }}{% endif %}{% endfor %}{% endfor %}
+  configDB: {{ replicaset_name }}/{{ members }}
 
 

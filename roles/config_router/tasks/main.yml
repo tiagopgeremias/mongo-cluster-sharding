@@ -1,12 +1,6 @@
-- name: Create configurations file
-  template:
-    src: mongodb_router.conf.j2
-    dest: /etc/mongos.conf
-
-
 - name: Create systemd configuration
   blockinfile:
-    path: /etc/systemd/system/mongos
+    path: /etc/systemd/system/mongos.service
     block: |
       [Unit]
       Description=High-performance, schema-free document-oriented database
@@ -35,19 +29,29 @@
     group: root
     create: true
 
+- name: "[ConfigSrv] Add Storage nodes in replicaset ConfigServer"
+  set_fact:
+    members: "{{ groups.config_servers|join(',') }}"
+  with_items: "{{ groups.config_servers }}"
+
+- name: Get replica set name
+  set_fact:
+    replicaset_name: "{{ hostvars[members.split(',')[0]]['replica_set_name'] }}"
+
+# - name: Add a standalone mongod shard running on port 27018 of mongodb0.example.net
+#   mongodb_shard:
+#     shard: "{{ hostvars[item]['replica_set_name']  }}/{{ item }}"
+#     state: present
+#   with_items: "{{ groups['shard_servers'] }}"
+
+- name: Create configurations file
+  template:
+    src: mongodb_router.conf.j2
+    dest: /etc/mongos.conf
+
 - name: Systemd enable Mongo QueryRouter
   systemd:
     name: mongos
     enabled: yes
     state: started
     daemon_reload: yes
-
-# - name: MongoDB add Sharding
-#   shell: "mongo --eval \"sh.addShard('{{ hostvars[item]['replica_set_name']  }}/{{ item }}')\""
-#   with_items: "{{ groups['shard_servers'] }}"
-
-- name: Add a standalone mongod shard running on port 27018 of mongodb0.example.net
-  mongodb_shard:
-    shard: "{{ hostvars[item]['replica_set_name']  }}/{{ item }}"
-    state: present
-  with_items: "{{ groups['shard_servers'] }}"

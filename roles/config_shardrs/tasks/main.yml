@@ -1,3 +1,19 @@
+- name: Install Mongodb and Dependencies
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    # - mongodb-org
+    - epel-release
+    - python-pip
+
+- name: Python modules
+  pip:
+    name: "{{ item }}"
+  loop:
+    - setuptools
+    - pymongo
+
 #
 # Anotações importantes para execução da task.
 #  

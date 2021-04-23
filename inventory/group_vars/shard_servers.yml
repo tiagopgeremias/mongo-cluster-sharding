@@ -8,3 +8,9 @@ file_system: ext4
 
 # Tipo de sharding cluster: configsvr/shardsvr
 cluster_role: shardsvr
+
+# Nome da ReplicaSet
+replica_set_name: shardrs
+
+# Porta do serviço do MongoDB, configsvr = 27019, shardsvr = 27017
+replica_set_port: 27017
