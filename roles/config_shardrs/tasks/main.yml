@@ -31,6 +31,10 @@
     state: restarted
     daemon_reload: yes
 
+- name: Waiting 30 seconds to MongoDB ready
+  wait_for:
+    timeout: 30
+
 #
 # Shards Replicaser Config
 #

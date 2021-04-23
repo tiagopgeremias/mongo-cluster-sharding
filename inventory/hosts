@@ -1,6 +1,6 @@
 [all:vars]
-ansible_user=ansible
-remote_user=ansible
+ansible_user=root
+remote_user=root
 become_user=root
 
 [router_servers]

@@ -60,7 +60,7 @@
 - name: Get primary node in sigle node
   set_fact:
     primary_rs: "{{ item.split(':')[0] }}"
-  with_items: "{{ replicaset.replicaset.keys() }}"
+  with_items: "{{ replicaset.replicaset.keys()|list }}"
   when: (replicaset.replicaset|length) == 1
 
 - name: "Create Database user administrator"
