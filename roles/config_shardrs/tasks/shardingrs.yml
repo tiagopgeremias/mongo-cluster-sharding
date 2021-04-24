@@ -13,7 +13,7 @@
   run_once: true
 
 - name: "[Sharding] Add Storage nodes in replicaset"
-  mongodb_replicaset:
+  community.mongodb.mongodb_replicaset:
     login_host: localhost
     replica_set: "{{ replica_set_name }}"
     members: "{{ groups[item]|join(',') }}"
@@ -26,7 +26,7 @@
 #
 
 - name: "[ConfigSrv] Add Storage nodes in replicaset ConfigServer"
-  mongodb_replicaset:
+  community.mongodb.mongodb_replicaset:
     login_host: localhost
     login_port: "{{ replica_set_port }}"
     replica_set: "{{ replica_set_name }}"
@@ -64,7 +64,7 @@
   when: (replicaset.replicaset|length) == 1
 
 - name: "Create Database user administrator"
-  mongodb_user:
+  community.mongodb.mongodb_user:
     login_host: "{{ primary_rs }}"
     login_port: "{{ replica_set_port }}"
     database: "admin"

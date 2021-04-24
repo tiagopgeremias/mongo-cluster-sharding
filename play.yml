@@ -29,9 +29,9 @@
     - http_proxy: http://10.11.100.250:8082
     - https_proxy: http://10.11.100.250:8082
 
-# - hosts: router_servers
-#   become: yes
-#   roles:
-#     - config_router
+- hosts: router_servers
+  become: yes
+  roles:
+    - config_router
 
       

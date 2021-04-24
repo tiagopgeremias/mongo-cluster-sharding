@@ -8,16 +8,14 @@
       After=network.target
 
       [Service]
-      User=mongodb
-      Group=mongodb
-      Type=forking
+      User=mongod
+      Group=mongod
       RuntimeDirectory=mongodb
       RuntimeDirectoryMode=755
       PIDFile=/var/run/mongodb/mongos.pid
       ExecStart=/usr/bin/mongos --quiet \
           --config /etc/mongos.conf \
-          --pidfilepath /var/run/mongodb/mongos.pid \
-          --fork
+          --pidfilepath /var/run/mongodb/mongos.pid
       LimitFSIZE=infinity
       LimitCPU=infinity
       LimitAS=infinity
