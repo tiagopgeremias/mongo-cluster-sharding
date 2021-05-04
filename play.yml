@@ -1,37 +1,11 @@
-# - hosts: teste
-#   tasks:
-#     - name: Teste
-#       debug:
-#         # var: hostvars[item]['replica_set_name'] 
-#         var: item
-#       with_items: "{{ groups['shard_servers'] }}"
-  
-
-# - hosts: router_servers
-#   roles:
-#     - config_router
-
-# - hosts: all
-#   become: yes
-#   any_errors_fatal: true
-#   roles:
-#     - config_system
-#   environment:
-#     - http_proxy: http://10.11.100.250:8082
-#     - https_proxy: http://10.11.100.250:8082
-
-- hosts: replicaset_nodes
+- hosts: all
   become: yes
   roles:
-    # - config_lvm
-    - config_shardrs
-  environment:
-    - http_proxy: http://10.11.100.250:8082
-    - https_proxy: http://10.11.100.250:8082
+    - role: config_system
+      tags: add_node
 
-- hosts: router_servers
-  become: yes
-  roles:
-    - config_router
+    - { role: config_lvm, when: "'replicaset_nodes' in hostvars[ansible_host]['group_names']", tags: add_node }
 
-      
+    - { role: config_shardrs, when: "'replicaset_nodes' in hostvars[ansible_host]['group_names']", tags: add_node }
+
+    - { role: config_router, when: "'router_servers' in hostvars[ansible_host]['group_names']" }

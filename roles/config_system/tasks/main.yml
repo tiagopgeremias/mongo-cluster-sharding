@@ -3,6 +3,12 @@
   ignore_errors: yes
   register: disable_setenforce
 
+- name: Stop and disable firewalld.
+  systemd:
+    name: firewalld
+    enabled: no
+    state: stopped
+
 - name: Disable SELinux on reboot
   selinux:
     state: disabled
@@ -120,7 +126,14 @@
     - mongodb-org
     - epel-release
     - python-pip
-  
+
+- name: Stop Mongod
+  systemd:
+    name: mongod
+    enabled: no
+    state: stopped
+    daemon_reload: yes
+
 - name: Install LVM only in Sharding Servers
   yum:
     name: lvm*

@@ -4,7 +4,7 @@ vg_name: vg_mongodb
 pvs_name: /dev/sdb1
 lv_name: lv_mongodb
 mount_point: /data
-file_system: ext4
+file_system: xfs
 
 # Tipo de sharding cluster: configsvr/shardsvr
 cluster_role: configsvr

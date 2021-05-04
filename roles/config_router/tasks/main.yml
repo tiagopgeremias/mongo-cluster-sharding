@@ -3,29 +3,43 @@
     path: /etc/systemd/system/mongos.service
     block: |
       [Unit]
-      Description=High-performance, schema-free document-oriented database
-      After=syslog.target
-      After=network.target
+      Description=MongoDB Database Server
+      Documentation=https://docs.mongodb.org/manual
+      After=network-online.target
+      Wants=network-online.target
 
       [Service]
       User=mongod
       Group=mongod
-      RuntimeDirectory=mongodb
-      RuntimeDirectoryMode=755
+      Environment="OPTIONS=-f /etc/mongos.conf --quiet"
+      ExecStart=/usr/bin/mongos $OPTIONS
+      ExecStartPre=/usr/bin/mkdir -p /var/run/mongodb
+      ExecStartPre=/usr/bin/chown mongod:mongod /var/run/mongodb
+      ExecStartPre=/usr/bin/chmod 0755 /var/run/mongodb
+      PermissionsStartOnly=true
       PIDFile=/var/run/mongodb/mongos.pid
-      ExecStart=/usr/bin/mongos --quiet \
-          --config /etc/mongos.conf \
-          --pidfilepath /var/run/mongodb/mongos.pid
       LimitFSIZE=infinity
       LimitCPU=infinity
       LimitAS=infinity
       LimitNOFILE=64000
       LimitNPROC=64000
+      LimitMEMLOCK=infinity
+      TasksMax=infinity
+      TasksAccounting=false
+
       [Install]
       WantedBy=multi-user.target
     owner: root
     group: root
     create: true
+
+- name: Copy Security Key File.
+  copy:
+    src: "{{ security_key }}"
+    dest: /var/lib/mongo/mongo_security.key
+    owner: mongod
+    group: mongod
+    mode: '0600'
 
 - name: "[ConfigSrv] Add Storage nodes in replicaset ConfigServer"
   set_fact:
@@ -35,12 +49,6 @@
 - name: Get replica set name
   set_fact:
     replicaset_name: "{{ hostvars[members.split(',')[0]]['replica_set_name'] }}"
-
-# - name: Add a standalone mongod shard running on port 27018 of mongodb0.example.net
-#   mongodb_shard:
-#     shard: "{{ hostvars[item]['replica_set_name']  }}/{{ item }}"
-#     state: present
-#   with_items: "{{ groups['shard_servers'] }}"
 
 - name: Create configurations file
   template:
@@ -53,3 +61,37 @@
     enabled: yes
     state: started
     daemon_reload: yes
+
+- name: Waiting 30 seconds to MongoRouter ready
+  wait_for:
+    timeout: 30
+
+- name: Add a replicaset shard
+  community.mongodb.mongodb_shard:
+    shard: "{{ hostvars[item].replica_set_name }}/{{ item }}:{{ hostvars[item].replica_set_port }}"
+    state: present
+  with_items: "{{ groups.shard_servers }}"
+  when: "hostvars[item].primary is defined"
+
+- name: "Create Database user administrator"
+  community.mongodb.mongodb_user:
+    login_host: localhost
+    database: "admin"
+    name: "{{ user_admin }}"
+    password: "{{ pass_admin }}"
+    roles: "root"
+
+- name: Waiting 10 seconds
+  wait_for:
+    timeout: 10
+
+- name: Disable transitionToAuth
+  replace:
+    path: /etc/mongos.conf
+    regexp: '^  transitionToAuth: true'
+    replace: '#  transitionToAuth: true'
+
+- name: Restart Mongo Query Router
+  systemd:
+    name: mongos
+    state: restarted

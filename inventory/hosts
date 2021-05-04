@@ -12,9 +12,6 @@ become_user=root
 config_servers
 shard_servers
 
-# [config_servers:children]
-# configrs1
-
 [config_servers]
 10.11.101.217 primary=yes
 

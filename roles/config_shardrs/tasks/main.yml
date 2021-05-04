@@ -1,23 +1,16 @@
-- name: Install Mongodb and Dependencies
-  yum:
-    name: "{{ item }}"
-    state: present
-  loop:
-    # - mongodb-org
-    - epel-release
-    - python-pip
-
-- name: Python modules
-  pip:
-    name: "{{ item }}"
-  loop:
-    - setuptools
-    - pymongo
-
 #
 # Anotações importantes para execução da task.
 #  
 # - Variavel shardings_config, suas propriedades estão em inventory/group_vars/shard-servers.yml
+
+- name: Copy Security Key File.
+  copy:
+    src: "{{ security_key }}"
+    dest: /data/mongo_security.key
+    owner: mongod
+    group: mongod
+    mode: '0600'
+
 
 - name: Create configurations files
   template:
