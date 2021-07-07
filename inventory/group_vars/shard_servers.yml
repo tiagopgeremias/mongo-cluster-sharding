@@ -11,3 +11,6 @@ cluster_role: shardsvr
 
 # Porta do serviço do MongoDB, configsvr = 27019, shardsvr = 27017
 replica_set_port: 27017
+
+node_exporter: node_exporter-1.1.2.linux-amd64
+mongodb_exporter: mongodb_exporter-0.20.4.linux-amd64

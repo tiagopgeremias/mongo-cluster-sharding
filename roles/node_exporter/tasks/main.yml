@@ -1,0 +1,138 @@
+- name: Download Prometheus node exporter
+  unarchive:
+    src: "http://linuxupdate.dimed.com.br/prometheus/{{node_exporter}}.tar.gz"
+    dest: /tmp/
+    remote_src: yes
+
+- name: Install Prometheus node exporter Step 1
+  command: "mv /tmp/{{node_exporter}}/node_exporter /usr/local/bin/node_exporter"
+
+- name: Install Prometheus node exporter Step 2
+  user:
+    name: node_exporter
+    system: yes
+    create_home: no
+
+- name: Install Prometheus node exporter Step 3
+  file:
+    path: /etc/sysconfig/node_exporter
+    owner: node_exporter
+    group: node_exporter
+    mode: '0644'
+
+- name: Install Prometheus node exporter Step 4
+  file:
+    path: /etc/systemd/system/node_exporter.service
+    state: absent
+
+- name: Install Prometheus node exporter Step 5
+  blockinfile:
+    path: /etc/systemd/system/node_exporter.service
+    block: |
+      [Unit]
+      Description=Node Exporter
+
+      [Service]
+      User=node_exporter
+      Group=node_exporter
+      EnvironmentFile=-/etc/sysconfig/node_exporter
+      ExecStart=/usr/local/bin/node_exporter $OPTIONS
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root
+    group: root
+    create: true
+
+- name: Install Prometheus node exporter Step 6
+  systemd:
+    state: started
+    enabled: yes
+    daemon_reload: yes
+    name: node_exporter
+
+#
+#   Mongo Exporter
+#
+- name: Get Mongo Primary Node
+  shell: "mongo -u {{ user_admin }} -p {{ pass_admin }} --quiet --eval \"rs.isMaster().primary\""
+  run_once: true
+  register: primary_node
+
+- name: "Create Database user administrator"
+  community.mongodb.mongodb_user:
+    login_host: localhost
+    login_user: "{{ user_admin }}"
+    login_password: "{{ pass_admin }}"
+    database: "admin"
+    name: "mongodb_exporter"
+    password: "mongodb_exporter"
+    roles:
+      - db: admin 
+        role: clusterMonitor
+      - db: local
+        role: read
+  when: "inventory_hostname == primary_node.stdout.split(':')[0]"
+
+- name: Download Prometheus Mongo exporter
+  unarchive:
+    src: "http://linuxupdate.dimed.com.br/mongodb/{{mongodb_exporter}}.tar.gz"
+    dest: /tmp/
+    remote_src: yes
+
+- name: Install Prometheus Mongo exporter Step 1
+  command: "mv /tmp/{{mongodb_exporter}}/mongodb_exporter /usr/local/bin/mongodb_exporter"
+
+- name: Install Prometheus Mongo exporter Step 2
+  template:
+    src: mongodb_exporter.env.j2
+    dest: /etc/default/mongodb_exporter
+    owner: mongod
+    group: mongod
+    mode: '0644'
+    
+- name: Install Prometheus Mongo exporter Step 3
+  file:
+    path: /etc/systemd/system/mongodb_exporter.service
+    state: absent
+
+- name: Install Prometheus Mongo exporter Step 4
+  blockinfile:
+    path: /etc/systemd/system/mongodb_exporter.service
+    block: |
+      [Unit]
+      Description=MongoDB Exporter
+      User=mongod
+
+      [Service]
+      Type=simple
+      Restart=always
+      EnvironmentFile=/etc/default/mongodb_exporter
+      ExecStart=/usr/local/bin/mongodb_exporter --mongodb.global-conn-pool --compatible-mode 
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root
+    group: root
+    create: true
+
+- name: Install Prometheus Mongo exporter Step 5
+  systemd:
+    state: started
+    enabled: yes
+    daemon_reload: yes
+    name: mongodb_exporter
+
+#
+#   Zabbix Host Register
+#
+
+- name: Download Zabbix Register
+  unarchive:
+    src: http://linuxupdate.dimed.com.br/zabbix/zabbix_register.tar.gz
+    dest: /tmp/
+    remote_src: yes
+
+- name: Execute Zabbix Register
+  command: /tmp/zabbix_register
+  ignore_errors: yes

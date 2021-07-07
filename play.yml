@@ -1,11 +1,15 @@
 - hosts: all
   become: yes
   roles:
-    - role: config_system
-      tags: add_node
+    - { role: node_exporter, tags: add_node }
+
+    - { role: config_system, tags: add_node }
 
     - { role: config_lvm, when: "'replicaset_nodes' in hostvars[ansible_host]['group_names']", tags: add_node }
 
     - { role: config_shardrs, when: "'replicaset_nodes' in hostvars[ansible_host]['group_names']", tags: add_node }
 
     - { role: config_router, when: "'router_servers' in hostvars[ansible_host]['group_names']" }
+  environment:
+    http_proxy: http://10.11.100.250:8082
+    https_proxy: http://10.11.100.250:8082
