@@ -1,0 +1,15 @@
+[all:vars]
+ansible_user=root
+remote_user=root
+become_user=root
+
+[replicaset_nodes:children]
+shard_servers
+
+[shard_servers:children]
+rsservicosperifericos
+
+[rsservicosperifericos]
+yildun200-1.dimed.com.br primary=yes
+yildun200-2.dimed.com.br
+yildun200-3.dimed.com.br
